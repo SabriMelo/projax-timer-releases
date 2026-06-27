@@ -1,0 +1,67 @@
+{
+  "name": "projax-timer",
+  "version": "1.0.0",
+  "description": "Projax Timer — controle de horas por projeto",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
+    "electron-updater": "^6.3.9",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "electron": "^36.3.1",
+    "electron-builder": "^26.0.12",
+    "electron-icon-builder": "^2.0.1",
+    "electron-vite": "^3.1.0",
+    "lucide-react": "^0.511.0",
+    "postcss": "^8.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "com.projax.timer",
+    "productName": "Projax Timer",
+    "copyright": "© 2026 Projax",
+    "directories": { "output": "dist" },
+    "extraResources": [
+      { "from": "resources/tray.png", "to": "tray.png" },
+      { "from": "resources/icon.png", "to": "icon.png" }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "resources/icons/win/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "resources/icons/win/icon.ico",
+      "uninstallerIcon": "resources/icons/win/icon.ico",
+      "installerHeaderIcon": "resources/icons/win/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Projax Timer"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "resources/icons/mac/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "resources/icons/png"
+    }
+  }
+}
