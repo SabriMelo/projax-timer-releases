@@ -37,11 +37,26 @@ function runDetection(): { files: DetectedFile[]; procs: DiagProcess[]; error: s
     // Script único: detecta processos + janela em foco
     // Usa execFileSync para passar diretamente ao PowerShell sem passar pelo cmd.exe
     // (elimina problemas de escaping de aspas no DllImport)
+    // Compara pelo PROCESSO dono da janela em foco (GetWindowThreadProcessId), não pelo
+    // MainWindowHandle — esse é calculado pelo .NET com uma heurística que fica errada em
+    // apps com várias janelas internas (painéis, splash, diálogos), fazendo a janela em foco
+    // "de verdade" nunca bater com o handle esperado e o app nunca marcar como em background.
     const script = `
-      try { Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name FGW -Namespace PGAX -ErrorAction Stop } catch {}
-      $fg = try { [PGAX.FGW]::GetForegroundWindow() } catch { [IntPtr]::Zero }
+      try {
+        Add-Type -MemberDefinition '
+          [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+          [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+        ' -Name FGW -Namespace PGAX -ErrorAction Stop
+      } catch {}
+      $fgProcId = 0
+      try {
+        $fgHandle = [PGAX.FGW]::GetForegroundWindow()
+        $procId = 0
+        [void][PGAX.FGW]::GetWindowThreadProcessId($fgHandle, [ref]$procId)
+        $fgProcId = $procId
+      } catch {}
       Get-Process | Where-Object { $_.MainWindowTitle -ne '' } |
-        Select-Object @{N='n';E={$_.Name}},@{N='t';E={$_.MainWindowTitle}},@{N='fg';E={$_.MainWindowHandle -eq $fg}} |
+        Select-Object @{N='n';E={$_.Name}},@{N='t';E={$_.MainWindowTitle}},@{N='fg';E={$_.Id -eq $fgProcId}} |
         ConvertTo-Json -Compress
     `
 
