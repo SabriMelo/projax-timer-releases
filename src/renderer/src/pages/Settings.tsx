@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Settings2, Plus, Trash2, ChevronDown, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Settings2, Plus, Trash2, ChevronDown, Check, AlertCircle } from 'lucide-react'
 import { useStore, NamingConfig, CategoryMapping } from '../store/useStore'
+import { apiRequest } from '../lib/api'
 
 const SEPARATORS = [
   { value: '_', label: 'Underline  _' },
@@ -145,16 +146,45 @@ function NamingPreview({ config }: { config: NamingConfig }) {
 }
 
 export default function Settings() {
-  const { namingConfig, setNamingConfig } = useStore()
+  const { token, namingConfig, setNamingConfig } = useStore()
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [loadingRemote, setLoadingRemote] = useState(false)
   const [newKw, setNewKw] = useState('')
   const [newLbl, setNewLbl] = useState('')
   const [mappingAdded, setMappingAdded] = useState(false)
 
-  const handleSave = () => {
-    setNamingConfig({ configured: true })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  // Carrega a config salva no servidor (compartilhada pelo escritório) ao abrir a tela
+  useEffect(() => {
+    if (!token) return
+    setLoadingRemote(true)
+    apiRequest('/api/timer/naming-config', { token })
+      .then(({ config }) => {
+        if (config) setNamingConfig({ ...config, configured: true })
+      })
+      .catch(() => {})
+      .finally(() => setLoadingRemote(false))
+  }, [token])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const { separator, codePosition, clientPosition, categoryPosition, categoryMappings } = namingConfig
+      await apiRequest('/api/timer/naming-config', {
+        method: 'PUT',
+        token: token!,
+        body: { separator, codePosition, clientPosition, categoryPosition, categoryMappings },
+      })
+      setNamingConfig({ configured: true })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e: any) {
+      setSaveError(e.message ?? 'Erro ao salvar configuração')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const addMapping = () => {
@@ -282,13 +312,17 @@ export default function Settings() {
       </div>
 
       {/* Save */}
-      <div className="px-4 py-3 border-t border-sand-md shrink-0 bg-white/60">
+      <div className="px-4 py-3 border-t border-sand-md shrink-0 bg-white/60 space-y-1.5">
+        {saveError && (
+          <p className="text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={11} /> {saveError}</p>
+        )}
         <button
           onClick={handleSave}
-          className={`w-full h-10 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2
+          disabled={saving || loadingRemote}
+          className={`w-full h-10 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60
             ${saved ? 'bg-emerald-500 text-white' : 'bg-brand text-white hover:bg-brand-dk'}`}
         >
-          {saved ? <><Check size={14} /> Salvo!</> : 'Salvar configuração'}
+          {saved ? <><Check size={14} /> Salvo!</> : saving ? 'Salvando...' : 'Salvar configuração'}
         </button>
       </div>
     </div>

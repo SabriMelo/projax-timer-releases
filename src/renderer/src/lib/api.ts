@@ -14,7 +14,7 @@ declare global {
       stopDetection: () => void
 
       onFilesDetected: (
-        cb: (files: { fileName: string; app: string }[]) => void
+        cb: (files: { fileName: string; app: string; active: boolean }[]) => void
       ) => () => void
 
       onIdleUpdate: (cb: (seconds: number) => void) => () => void

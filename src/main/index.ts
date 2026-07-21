@@ -17,6 +17,7 @@ const TRACKED_APPS = [
 interface DetectedFile {
   fileName: string
   app: string
+  active: boolean
 }
 
 interface DiagProcess {
@@ -66,18 +67,31 @@ function runDetection(): { files: DetectedFile[]; procs: DiagProcess[]; error: s
 
       let detectedFile: string | null = null
       if (app) {
+        // 1) Tenta achar "nome.ext" literal no título (funciona pra AutoCAD, Revit etc.)
         for (const ext of app.exts) {
           const pattern = new RegExp(`([^\\\\/:*?"<>|\\r\\n\\[\\]]+\\${ext})`, 'i')
           const match = title.match(pattern)
           if (match) {
-            const fileName = match[1].trim()
-            const key = `${app.name}:${fileName}`
-            if (!seen.has(key)) {
-              seen.add(key)
-              results.push({ fileName, app: app.name, active: isForeground })
-            }
             detectedFile = match[1].trim()
             break
+          }
+        }
+
+        // 2) Fallback: alguns apps (ex.: SketchUp) não colocam a extensão no título,
+        // só "<nome-do-arquivo> - SketchUp 2024". Remove esse sufixo " - AppName ..." do fim.
+        if (!detectedFile) {
+          const suffixPattern = new RegExp(`\\s*[-–—]\\s*${app.name}\\b.*$`, 'i')
+          const stripped = title.replace(suffixPattern, '').trim()
+          if (stripped && stripped !== title) {
+            detectedFile = stripped
+          }
+        }
+
+        if (detectedFile) {
+          const key = `${app.name}:${detectedFile}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            results.push({ fileName: detectedFile, app: app.name, active: isForeground })
           }
         }
         diagProcs.push({ name: procName, title, matchedApp: app.name, detectedFile, foreground: isForeground })
