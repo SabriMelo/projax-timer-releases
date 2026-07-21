@@ -30,6 +30,13 @@ declare global {
       minimizeWindow: () => void
       maximizeWindow: () => void
       closeWindow:    () => void
+
+      checkForUpdate: () => Promise<{ checked: boolean; error?: string }>
+      downloadUpdate: () => void
+      installUpdate: () => void
+      onUpdateAvailable: (cb: (info: { version: string }) => void) => () => void
+      onUpdateProgress: (cb: (info: { percent: number }) => void) => () => void
+      onUpdateDownloaded: (cb: (info: { version: string }) => void) => () => void
     }
   }
 }

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell, powerMonitor, Tray, Menu, nativeImage } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { execSync, execFileSync } from 'child_process'
 
@@ -297,6 +298,46 @@ ipcMain.on('detection:stop', () => stopDetection())
 
 ipcMain.handle('detection:diagnose', () => runDetection())
 
+// ── Auto-update ────────────────────────────────────────────────────────────────
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = false
+
+function setupAutoUpdater() {
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update:available', { version: info.version })
+  })
+  autoUpdater.on('update-not-available', () => {
+    mainWindow?.webContents.send('update:not-available')
+  })
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update:progress', { percent: progress.percent })
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow?.webContents.send('update:downloaded', { version: info.version })
+  })
+  autoUpdater.on('error', (err) => {
+    mainWindow?.webContents.send('update:error', { message: err.message })
+  })
+}
+
+ipcMain.handle('update:check', async () => {
+  if (!app.isPackaged) return { checked: false }
+  try {
+    await autoUpdater.checkForUpdates()
+    return { checked: true }
+  } catch (err: any) {
+    return { checked: false, error: err.message }
+  }
+})
+
+ipcMain.on('update:download', () => {
+  if (app.isPackaged) autoUpdater.downloadUpdate()
+})
+
+ipcMain.on('update:install', () => {
+  autoUpdater.quitAndInstall()
+})
+
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 declare module 'electron' {
   interface App { isQuitting: boolean }
@@ -317,6 +358,13 @@ app.whenReady().then(() => {
 
   createWindow()
   createTray()
+  setupAutoUpdater()
+
+  if (app.isPackaged) {
+    // Primeira checagem logo após abrir, depois a cada 4h
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 10_000)
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -1,6 +1,6 @@
 {
   "name": "projax-timer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Projax Timer — controle de horas por projeto",
   "main": "out/main/index.js",
   "scripts": {
@@ -37,6 +37,9 @@
     "productName": "Projax Timer",
     "copyright": "© 2026 Projax",
     "directories": { "output": "dist" },
+    "publish": [
+      { "provider": "github", "owner": "SabriMelo", "repo": "projax-timer-releases" }
+    ],
     "extraResources": [
       { "from": "resources/tray.png", "to": "tray.png" },
       { "from": "resources/icon.png", "to": "icon.png" }

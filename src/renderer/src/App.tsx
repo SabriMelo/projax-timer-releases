@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Clock, History, LogOut, RefreshCw, Settings2, AlertCircle, Minus, Maximize2, X } from 'lucide-react'
+import { Clock, History, LogOut, RefreshCw, Settings2, AlertCircle, Minus, Maximize2, X, Download, RotateCw } from 'lucide-react'
 
 const LOGO_PATH = "M926.508 485.556C1091.66 485.556 1249.32 540.28 1366.29 649.119C1484.01 758.661 1556.01 918.889 1556.01 1120.35H1430.01C1430.01 1069.8 1424.71 1023.16 1414.89 980.372L1160.41 1120.27H1429.8V1246.27H931.209L926.625 1248.79V1730.46L800.625 1730.46V611.388H926.508V485.556ZM994.331 1067.78L1371.18 860.618C1346.88 814.173 1316.03 774.461 1280.46 741.362C1246.79 710.034 1208.27 684.057 1166.09 663.782L994.331 1067.78ZM926.625 904.992L1046.26 623.596C1007.88 615.639 967.797 611.564 926.625 611.557V904.992Z"
 import { useStore } from './store/useStore'
@@ -15,6 +15,68 @@ type Tab = 'timer' | 'history' | 'settings'
 async function getFreshToken(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession()
   return session?.access_token ?? null
+}
+
+type UpdateState =
+  | { phase: 'idle' }
+  | { phase: 'available'; version: string }
+  | { phase: 'downloading'; percent: number }
+  | { phase: 'downloaded'; version: string }
+
+function UpdateBanner() {
+  const [update, setUpdate] = useState<UpdateState>({ phase: 'idle' })
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    const cleanupAvailable = window.electronAPI.onUpdateAvailable(({ version }) => {
+      setDismissed(false)
+      setUpdate({ phase: 'available', version })
+    })
+    const cleanupProgress = window.electronAPI.onUpdateProgress(({ percent }) => {
+      setUpdate({ phase: 'downloading', percent })
+    })
+    const cleanupDownloaded = window.electronAPI.onUpdateDownloaded(({ version }) => {
+      setDismissed(false)
+      setUpdate({ phase: 'downloaded', version })
+    })
+    return () => { cleanupAvailable(); cleanupProgress(); cleanupDownloaded() }
+  }, [])
+
+  if (update.phase === 'idle' || dismissed) return null
+
+  return (
+    <div className="px-4 py-2 bg-brand/10 border-b border-brand/20 flex items-center gap-2">
+      {update.phase === 'downloaded'
+        ? <RotateCw size={12} className="text-brand shrink-0" />
+        : <Download size={12} className="text-brand shrink-0" />}
+
+      <p className="text-[11px] text-brand-dk flex-1">
+        {update.phase === 'available' && `Nova versão ${update.version} disponível.`}
+        {update.phase === 'downloading' && `Baixando atualização... ${Math.round(update.percent)}%`}
+        {update.phase === 'downloaded' && `Versão ${update.version} pronta — reinicie para instalar.`}
+      </p>
+
+      {update.phase === 'available' && (
+        <button
+          onClick={() => window.electronAPI.downloadUpdate()}
+          className="text-[11px] text-brand font-semibold hover:underline shrink-0"
+        >
+          Baixar
+        </button>
+      )}
+      {update.phase === 'downloaded' && (
+        <button
+          onClick={() => window.electronAPI.installUpdate()}
+          className="text-[11px] text-brand font-semibold hover:underline shrink-0"
+        >
+          Reiniciar agora
+        </button>
+      )}
+      <button onClick={() => setDismissed(true)} className="p-0.5 rounded hover:bg-brand/10 text-brand/60 shrink-0">
+        <X size={12} />
+      </button>
+    </div>
+  )
 }
 
 export default function App() {
@@ -120,6 +182,8 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      <UpdateBanner />
 
       {/* Erro de projetos */}
       {projectError && (

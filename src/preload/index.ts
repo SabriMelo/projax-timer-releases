@@ -31,4 +31,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('auth:callback', handler)
     return () => ipcRenderer.removeListener('auth:callback', handler)
   },
+
+  checkForUpdate: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.send('update:download'),
+  installUpdate: () => ipcRenderer.send('update:install'),
+  onUpdateAvailable: (cb: (info: { version: string }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, info: { version: string }) => cb(info)
+    ipcRenderer.on('update:available', handler)
+    return () => ipcRenderer.removeListener('update:available', handler)
+  },
+  onUpdateProgress: (cb: (info: { percent: number }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, info: { percent: number }) => cb(info)
+    ipcRenderer.on('update:progress', handler)
+    return () => ipcRenderer.removeListener('update:progress', handler)
+  },
+  onUpdateDownloaded: (cb: (info: { version: string }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, info: { version: string }) => cb(info)
+    ipcRenderer.on('update:downloaded', handler)
+    return () => ipcRenderer.removeListener('update:downloaded', handler)
+  },
 })
