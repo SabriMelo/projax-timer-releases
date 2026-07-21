@@ -228,8 +228,10 @@ export default function Timer() {
         body: {
           project_id: session.projectId,
           minutes,
-          description: `${session.app}${cat}: ${fileName}`,
+          description: cat ? cat.replace(' · ', '') : null,
           date: new Date().toISOString(),
+          file_name: fileName,
+          software: session.app,
         },
       })
       addEntry(entry)
