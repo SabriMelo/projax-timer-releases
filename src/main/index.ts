@@ -83,7 +83,9 @@ function runDetection(): { files: DetectedFile[]; procs: DiagProcess[]; error: s
           const suffixPattern = new RegExp(`\\s*[-–—]\\s*${app.name}\\b.*$`, 'i')
           const stripped = title.replace(suffixPattern, '').trim()
           if (stripped && stripped !== title) {
-            detectedFile = stripped
+            // Remove marcador de "não salvo" (ex.: "*") que alguns apps prefixam no título —
+            // sem isso, o nome do arquivo mudava a cada edição/salvamento e reiniciava a sessão.
+            detectedFile = stripped.replace(/^[*\s]+/, '').trim()
           }
         }
 
