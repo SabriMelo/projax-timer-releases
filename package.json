@@ -1,6 +1,6 @@
 {
   "name": "projax-timer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Projax Timer — controle de horas por projeto",
   "main": "out/main/index.js",
   "scripts": {
